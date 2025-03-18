@@ -9,15 +9,7 @@ Explore the metalloproteomes of various organisms studied by the Saito Lab.
 
 """)
 
-# Display HTML content
-components.html("""
-<iframe src="pages/metals_surface.html" width="700" height="500"></iframe>
-""", height=500)
-
-# Display HTML content
-#components.html("""
-#<iframe src="metals_surface.html" width="700" height="500"></iframe>
-#""", height=500)
+st.image("pao_zn_example_image.jpg", caption="Metalloproteomics Research")
 
 # Define the options for the dropdown menu
 options = {
