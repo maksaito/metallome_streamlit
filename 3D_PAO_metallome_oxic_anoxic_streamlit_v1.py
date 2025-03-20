@@ -4,6 +4,7 @@
 # https://github.com/maksaito/metallome_streamlit
 # https://www.biorxiv.org/content/10.1101/2025.01.15.633287v2
 
+### import packages
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -20,9 +21,6 @@ m_anoxic.set_index('Sample_ID', inplace=True)
 # Extract metal columns (all columns except 'SE Fraction' and 'AE Fraction')
 metal_columns = m_oxic.columns.difference(['SE Fraction', 'AE Fraction'])
 
-# Check dataset
-print(m_oxic.head())
-
 # Import dataset
 @st.cache_data
 def get_data():
@@ -35,13 +33,6 @@ metal_dropdown = st.sidebar.selectbox(
     index=sorted(metal_columns).index('Fe 56')  # default to Fe 56
 )
 
-# Create Dropdown Menu for contour height
-contour_height_dropdown = st.sidebar.selectbox(
-    'Contour Height:',
-    [0.8, 1, 1.2],
-    index=1  # default to 1
-)
-
 # Create Dropdown Menu for dataset type (oxic or anoxic)
 dataset_type_dropdown = st.sidebar.selectbox(
     'Dataset Type:',
@@ -50,7 +41,7 @@ dataset_type_dropdown = st.sidebar.selectbox(
 )
 
 # Define Plotting Function
-def plot_metal(metal, contour_height_factor, dataset_type):
+def plot_metal(metal, dataset_type):
     if dataset_type == 'Oxic':
         data = m_oxic
     else:
@@ -65,7 +56,7 @@ def plot_metal(metal, contour_height_factor, dataset_type):
     
     # Define the height for the contour plot based on the selected factor
     z_min, z_max = np.min(Z), np.max(Z)
-    contour_height = z_min + contour_height_factor * (z_max - z_min)
+    contour_height = z_min + 1 * (z_max - z_min)
 
     # Create a single 3D plot 
     fig = go.Figure()
@@ -91,7 +82,7 @@ def plot_metal(metal, contour_height_factor, dataset_type):
 
     # Set figure size, titles, labels, and shades of grey for backgrounds
     fig.update_layout(
-        title=f'{metal} ({dataset_type})',
+        #title=f'{metal} ({dataset_type})',
         width=800,  # Set the width of the figure
         height=600,  # Set the height of the figure
         scene=dict(
@@ -109,15 +100,124 @@ def plot_metal(metal, contour_height_factor, dataset_type):
     st.plotly_chart(fig)
 
 # Display the selected metal 
-st.write(f'Metalloproteome of *Pseudomonas aeruginosa*: {dataset_type_dropdown}')
+st.title(f'Metalloproteome of *Pseudomonas aeruginosa*: {dataset_type_dropdown}')
 
-# Plot the selected metal with the selected contour height factor and dataset type
-plot_metal(metal_dropdown, contour_height_dropdown, dataset_type_dropdown)
+# Plot the selected metal with the selected dataset type
+plot_metal(metal_dropdown, dataset_type_dropdown)
 
 # Button to display the dataframe
 if st.button('Show Dataframe'):
     st.dataframe(m_oxic if dataset_type_dropdown == 'Oxic' else m_anoxic)
 
-st.write('From Saito and McIlvin 2025 https://www.biorxiv.org/content/10.1101/2025.01.15.633287v2')
 
+# Protein Viewer 3D plot
+st.write("Display selected protein (currently oxic treatment only)")
+
+# Load protein data
+@st.cache_data
+def load_protein_data():
+    pr_full = pd.read_csv('2025_0214_pao_proteins_oxic_pivot_processed.csv')
+    pr_full.set_index('PA_ID', inplace=True)
+    return pr_full
+
+pr_full = load_protein_data()
+
+# Set 'PA_ID' as the index and drop unnecessary columns, remove extra columns
+# Transpose protein file to machine readable format 
+# version with annotations in second line
+pr = pr_full.drop(columns=['Molecular Weight', 'Annotation']).transpose().reset_index()
+# clean version
+pr = pr_full.drop(columns=['Molecular Weight', 'Annotation', 'Processed Annotation']).transpose().reset_index()
+
+# organize 2D matrix information
+pr.rename(columns={'index': 'AE-SE'}, inplace=True)
+pr[['AE Fraction', 'SE Fraction']] = pr['AE-SE'].str.split('-', expand=True)
+
+# Move the new columns to the far left
+cols = ['AE Fraction', 'SE Fraction'] + pr.columns[:-2].tolist()
+pr = pr[cols]
+
+# extract gene IDs (also the index)
+pa_columns = pr_full.index.tolist()
+
+# extract annotations
+processed_annotations = pr_full['Processed Annotation'].tolist()
+
+# change name of df 
+pr_o = pr
+
+# Convert relevant columns to numeric types if necessary 
+pr_o = pr_o.apply(pd.to_numeric, errors='ignore')
+
+# Create a dictionary to map protein columns to their combined text
+protein_annotation_dict = dict(zip(pa_columns, processed_annotations))
+
+# Sidebar menu for PA_ID selection
+protein_combined = st.sidebar.selectbox(
+    "Select Protein:",
+    options=sorted([f"{pa_id} - {annotation}" for pa_id, annotation in zip(pa_columns, processed_annotations)])
+)
+
+# Define Plotting Function
+def plot_protein(protein_combined):
+    # Extract the original protein column name from the combined text
+    protein = next(key for key, value in protein_annotation_dict.items() if f"{key} - {value}" == protein_combined)
+    
+    # Creating a pivot table to reshape the protein data
+    protein_pivot_table = pr_o.pivot(index='SE Fraction', columns='AE Fraction', values=protein)
+    X_protein, Y_protein = np.meshgrid(protein_pivot_table.columns, protein_pivot_table.index)
+    Z_protein = protein_pivot_table.values
+
+    z_min_protein, z_max_protein = np.min(Z_protein), np.max(Z_protein)
+    contour_height_protein = z_min_protein + 1 * (z_max_protein - z_min_protein)
+
+    # Get the combined text for the selected protein
+    combined_text = protein_annotation_dict.get(protein, "")
+
+    # Creating the plot with Plotly
+    fig = go.Figure()
+
+    # Add protein surface plot with a hotter color palette
+    fig.add_trace(go.Surface(z=Z_protein, x=X_protein, y=Y_protein, colorscale='Hot', showscale=False))
+
+    # Add protein contour plot at a constant height above the surface
+    fig.add_trace(go.Surface(
+        z=np.ones_like(Z_protein) * contour_height_protein,
+        x=X_protein,
+        y=Y_protein,
+        surfacecolor=Z_protein,
+        colorscale='Hot',
+        showscale=False,
+        opacity=0.6,
+        contours=dict(
+            x=dict(show=False, highlight=False),
+            y=dict(show=False, highlight=False),
+            z=dict(show=True, project=dict(z=True))
+        )
+    ))
+
+    # Update layout for the plot and set figure size
+    fig.update_layout(
+        title=f"Protein: {protein_combined}",
+        title_font_size=20,  # Adjust the font size to match the metal plot title
+        width=1150,  # Set the width of the figure
+        height=600,  # Set the height of the figure
+        scene=dict(
+            xaxis_title='AE Fraction',
+            yaxis_title='SE Fraction',
+            zaxis_title=f'{protein}',
+            xaxis=dict(showgrid=False, backgroundcolor='lightgrey'),
+            yaxis=dict(showgrid=False, backgroundcolor='darkgrey'),
+            zaxis=dict(showgrid=False, backgroundcolor='whitesmoke'),
+            camera_eye=dict(x=1.5, y=1.5, z=1)
+        )
+    )
+    
+    # Display the plot
+    st.plotly_chart(fig)
+
+# Plot the data based on user selection
+plot_protein(protein_combined)
+
+st.write('From Saito and McIlvin 2025 https://www.biorxiv.org/content/10.1101/2025.01.15.633287v2')
 
