@@ -15,7 +15,7 @@ st.image("pao_zn_example_image.jpg", caption="Metalloproteomics Research")
 options = {
     "Select an organism: ": "",
     "Pseudomonas aeruginosa": "https://metallomeapp-pao-3d-metals.streamlit.app/",
-    "Pelagibacter (SAR11)": "https://metallop-sar11-3d-metals.streamlit.app/",
+    "Pelagibacter (SAR11)": "https://the-sar11-metalloproteome.streamlit.app/",
     "Pseudoalteromonas - coming soon": "",
     "E. coli - coming soon": "",
     "Trichodesmium - coming soon": "",
