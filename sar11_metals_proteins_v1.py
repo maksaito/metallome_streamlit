@@ -80,7 +80,7 @@ def plot_metal(metal):
 plot_metal(metal)
 
 # Load the proteins data
-pr_o = pd.read_csv('sar11_proteins.csv')
+pr_o = pd.read_csv('sar11_proteins_v2.csv')
 
 # Function to parse the Annotation column
 def parse_annotation(annotation):
