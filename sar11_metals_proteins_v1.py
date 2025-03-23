@@ -197,3 +197,34 @@ def plot_data(protein_combined):
 
 # Plot the selected protein
 plot_data(protein_combined)
+
+
+# Table of Protein Data
+
+# remove extra columns except protein annotation (protein)
+columns_to_remove2 = ['gene', 'db_xref', 'protein_id', 'location', 'gbkey', 'pseudo', 'partial', 'Annotation', 'Accession Number', 'Molecular Weight']
+modified_df_annot = result_df.drop(columns=columns_to_remove2)
+
+# Exclude string columns and columns with NaNs
+numeric_df = modified_df_annot.select_dtypes(include=[np.number]).dropna(axis=1, how='any')
+
+# Find the maximum value along each row and return the column header of that location
+modified_df_annot['Max_Column'] = numeric_df.idxmax(axis=1)
+
+# Insert the new column as the second column in the DataFrame
+cols = list(modified_df_annot.columns)
+cols.insert(1, cols.pop(cols.index('Max_Column')))
+modified_df_annot = modified_df_annot[cols]
+
+# Sort the DataFrame on the Max_Column in ascending order
+modified_df_annot = modified_df_annot.sort_values(by='Max_Column')
+
+# Streamlit app
+st.write("Protein Dataset with Maxima locations")
+
+# Sliders for rows and columns
+row_slider = st.slider("Row", 0, modified_df_annot.shape[0]-1, 0)
+col_slider = st.slider("Column", 0, modified_df_annot.shape[1]-1, 0)
+
+# Display the DataFrame subset
+st.dataframe(modified_df_annot.iloc[row_slider:row_slider+10, col_slider:col_slider+10])
