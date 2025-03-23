@@ -1,7 +1,9 @@
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import numpy as np
 import streamlit as st
+
 
 # Page title
 st.markdown("<h2 style='text-align: center; font-size: 36px;'>Metalloproteome of <em>Pelagibacter strain SAR11</em></h2>", unsafe_allow_html=True)
@@ -199,9 +201,9 @@ def plot_data(protein_combined):
 plot_data(protein_combined)
 
 
-# Table of Protein Data
+# Table of protein data
 
-# remove extra columns except protein annotation (protein)
+# Remove extra columns except protein annotation (protein)
 columns_to_remove2 = ['gene', 'db_xref', 'protein_id', 'location', 'gbkey', 'pseudo', 'partial', 'Annotation', 'Accession Number', 'Molecular Weight']
 modified_df_annot = result_df.drop(columns=columns_to_remove2)
 
@@ -222,9 +224,65 @@ modified_df_annot = modified_df_annot.sort_values(by='Max_Column')
 # Streamlit app
 st.write("Protein Dataset with Maxima locations")
 
-# Sliders for rows and columns
-row_slider = st.slider("Row", 0, modified_df_annot.shape[0]-1, 0)
-col_slider = st.slider("Column", 0, modified_df_annot.shape[1]-1, 0)
+# Search functionality
+search_term = st.text_input("Search for a protein annotation:")
+if search_term:
+    filtered_df = modified_df_annot[modified_df_annot['protein'].str.contains(search_term, case=False, na=False)]
+    st.dataframe(filtered_df)
+else:
+    st.dataframe(modified_df_annot)
 
-# Display the DataFrame subset
-st.dataframe(modified_df_annot.iloc[row_slider:row_slider+10, col_slider:col_slider+10])
+# Option to download the data as a CSV file
+st.download_button(
+    label="Download data as CSV",
+    data=modified_df_annot.to_csv(index=False).encode('utf-8'),
+    file_name='protein_data.csv',
+    mime='text/csv',
+)
+
+# 2D plot
+# Create Dropdown Menu for metals
+
+# Define Plotting Function
+def plot_metal(metal):
+    # Creating a pivot table to reshape the data
+    pivot_table = m_oxic.pivot(index='SE Fraction', columns='AE Fraction', values=metal)
+
+    # Extracting the x, y, and z data from the pivot table
+    X, Y = np.meshgrid(pivot_table.columns, pivot_table.index)
+    Z = pivot_table.values
+
+    # Define the height for the contour plot based on the selected factor
+    z_min, z_max = np.min(Z), np.max(Z)
+    
+    # Add subplot
+    fig = make_subplots(rows=1, cols=1, subplot_titles=(f"Metal (oxic): {metal}",))
+
+    # Add contour plot for oxic metals without colorbar
+    fig.add_trace(go.Contour(
+        z=Z,
+        x=X[0],
+        y=Y[:, 0],
+        colorscale='Hot',
+        contours=dict(
+            start=z_min,
+            end=z_max,
+            size=(z_max - z_min) / 10,
+            coloring='heatmap'
+        ),
+        showscale=False  # Remove colorbar
+    ), row=1, col=1)
+
+    # Update layout for better visualization and separate legends
+    fig.update_layout(
+        width=1150,
+        height=600,
+        xaxis_title='AE Fraction',
+        yaxis_title='SE Fraction'
+    )
+
+    # Display the plot
+    st.plotly_chart(fig)
+
+# Plot the selected metal
+plot_metal(metal)
