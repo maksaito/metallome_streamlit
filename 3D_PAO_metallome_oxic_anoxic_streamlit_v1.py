@@ -219,5 +219,8 @@ def plot_protein(protein_combined):
 # Plot the data based on user selection
 plot_protein(protein_combined)
 
+st.write('Protein Table')
+st.dataframe(pr_full)
+
 st.write('From Saito and McIlvin 2025 https://www.biorxiv.org/content/10.1101/2025.01.15.633287v2')
 
