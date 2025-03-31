@@ -219,6 +219,14 @@ def plot_protein(protein_combined):
 # Plot the data based on user selection
 plot_protein(protein_combined)
 
+# Protein Table with revised index and remove the wordy "annotation" column"
+# Combine the index and 'Processed Annotation' column to create a new index
+pr_full['New_Index'] = pr_full.index + '-' + pr_full['Processed Annotation']
+# Set the new index
+pr_full.set_index('New_Index', inplace=True)
+# Remove the 'Annotation' column
+pr_full.drop(columns=['Annotation'], inplace=True)
+
 st.write('Protein Table')
 st.dataframe(pr_full)
 
