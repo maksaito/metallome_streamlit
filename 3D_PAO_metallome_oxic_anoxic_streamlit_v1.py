@@ -230,5 +230,5 @@ pr_full.drop(columns=['Annotation'], inplace=True)
 st.write('Protein Table')
 st.dataframe(pr_full)
 
-st.write('From Saito and McIlvin 2025 https://www.biorxiv.org/content/10.1101/2025.01.15.633287v2')
+st.write('From Saito and McIlvin 2025 https://www.biorxiv.org/content/10.1101/2025.01.15.633287v3')
 
